@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlphaLoad - High Performance Tracker</title>
+    <link rel="stylesheet" href="design.css">
+    <!-- Chart.js dependency injected to render real-time inline regression models client-side -->
+    <script src="https://jsdelivr.net"></script>
+</head>
+<body>
+
+    <!-- LOGIN SCREEN -->
+    <main class="page active" id="page-login">
+        <div class="auth-wrap">
+            <h1>📚 AlphaLoad</h1>
+            <p>Log in to securely manage your routines.</p>
+            <div class="card">
+                <h2>Login</h2>
+                <label for="loginEmail">Email Address</label>
+                <input type="email" id="loginEmail" placeholder="name@domain.com">
+                
+                <label for="loginPassword">Password</label>
+                <input type="password" id="loginPassword" placeholder="••••••••">
+                
+                <div class="error-msg" id="loginError" style="display:none" role="alert"></div>
+                <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+                <p style="font-size:13px; margin-top:14px; color:var(--text-muted);">
+                    No account? <a href="#" onclick="showPage('page-register')" style="color:var(--accent-amber);">Register here</a>
+                </p>
+            </div>
+            <div style="background:#2d291e; border:1px solid var(--accent-amber); border-radius:4px; padding:12px; font-size:13px; color:var(--text-main); margin-top:12px;">
+                <strong>Demo Sandbox Credentials:</strong> demo@test.com / alexisDEAD111
+            </div>
+        </div>
+    </main>
+
+    <!-- REGISTER SCREEN -->
+    <main class="page" id="page-register">
+        <div class="auth-wrap">
+            <h1>💪 AlphaLoad</h1>
+            <p>Establish your local system engine account.</p>
+            <div class="card">
+                <h2>Register</h2>
+                <label for="regName">Full Name</label>
+                <input type="text" id="regName" placeholder="Jane Doe">
+                
+                <label for="regEmail">Email Address</label>
+                <input type="email" id="regEmail" placeholder="name@domain.com">
+                
+                <label for="regPassword">Password Password</label>
+                <input type="password" id="regPassword" placeholder="Choose a password">
+                
+                <div class="error-msg" id="registerError" style="display:none" role="alert"></div>
+                <button class="btn btn-primary" onclick="doRegister()">Create Account</button>
+                <p style="font-size:13px; margin-top:14px; color:var(--text-muted);">
+                    Already configured? <a href="#" onclick="showPage('page-login')" style="color:var(--accent-amber);">Login here</a>
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <!-- MAIN APP DASHBOARD -->
+    <div class="page" id="page-dashboard">
+        <header class="topbar">
+            <h1>⚡ AlphaLoad Engine</h1>
+            <nav style="display: flex; gap: 12px; align-items: center;">
+                <span id="welcomeMsg" style="font-size:14px;"></span>
+                <button class="btn btn-primary" style="margin-top:0; padding:6px 14px; font-size:13px;" onclick="window.location.href='admin.html'">Portal Admin</button>
+                <button class="btn btn-danger" style="margin-top:0; padding:6px 14px; font-size:13px;" onclick="doLogout()">Logout</button>
+            </nav>
+        </header>
+
+        <div class="container">
+            <!-- Dynamic Metrics Matrices -->
+            <section class="stats-row" aria-label="System Metrics Summary">
+                <div class="stat-box">
+                    <div class="stat-num" id="statTotal">0</div>
+                    <div class="stat-label">Total Logs</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-num" id="statHours">0h</div>
+                    <div class="stat-label">Total Hours</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-num" id="statSubjects">0</div>
+                    <div class="stat-label">Unique Splits</div>
+                </div>
+            </section>
+
+            <!-- Interactive Machine Learning Analytics Module -->
+            <section class="card" aria-label="Machine Learning Analytics Engine">
+                <h2>🤖 Predictive Engine (Linear Regression Model)</h2>
+                <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
+                    This sub-module runs a client-side ordinary least squares regression. It models your aggregate runtime trend patterns to predict subsequent throughput values.
+                </p>
+                <div id="mlModelOutput" style="font-weight: bold; margin-bottom: 10px; font-size: 15px; color: var(--accent-amber);"></div>
+                <div class="ml-container">
+                    <canvas id="regressionChart" style="max-height: 280px; width: 100%;"></canvas>
+                </div>
+            </section>
+
+            <!-- Form Log Configuration -->
+            <section class="card" aria-label="Log Input Entry Form">
+                <h2>Log Data Metrics Input</h2>
+                <form id="workoutForm" onsubmit="event.preventDefault(); addSession();">
+                    <label for="sessionDate">Date</label>
+                    <input type="date" id="sessionDate" required>
+                    
+                    <label for="sessionSubject">Log Type Split Category</label>
+                    <input type="text" id="sessionSubject" placeholder="e.g. UPPER BODY, BACK, FOREARMS" required>
+                    
+                    <label for="sessionMins">Execution Duration (minutes)</label>
+                    <input type="number" id="sessionMins" placeholder="e.g. 60" min="1" required>
+                    
+                    <label for="sessionNotes">Detailed Technical Parameters</label>
+                    <textarea id="sessionNotes" rows="3" placeholder="Specify loading coefficients, execution volume metrics, configurations..."></textarea>
+                    
+                    <div class="error-msg" id="sessionError" style="display:none" role="alert"></div>
+                    <button type="submit" class="btn btn-primary">Save Entry Parameters</button>
+                </form>
+            </section>
+
+            <!-- Data Table Visualisation Module -->
+            <section class="card" aria-label="Historical Metrics Logs Table">
+                <h2>System Historical Logs</h2>
+                <div id="sessionsContainer">
+                    <p style="color:var(--text-muted); font-size:14px;">No logs parsed within local client cache arrays.</p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Application Script Core -->
+    <script src="thejava.js"></script>
+</body>
+</html>

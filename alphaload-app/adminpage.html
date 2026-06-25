@@ -1,0 +1,145 @@
+
+---
+
+### File 4: `admin.html`
+Your separate global workspace manager dashboard. It connects automatically to data arrays generated in the user space and lets you delete objects globally.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlphaLoad - System Infrastructure Portal</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <header class="topbar" style="border-bottom-color: #c0392b;">
+        <h1>🛠️ Global Infra Management Core</h1>
+        <button class="btn btn-primary" style="margin-top:0;" onclick="window.location.href='index.html'">Back to Terminal App</button>
+    </header>
+
+    <main class="container">
+        <!-- Infrastructure Global Counter Elements Metrics -->
+        <section class="stats-row" aria-label="Global System Metrics Dashboard">
+            <div class="stat-box">
+                <div class="stat-num" id="totalUsers">0</div>
+                <div class="stat-label">Active Users</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-num" id="totalSessions">0</div>
+                <div class="stat-label">Total Shared Logs</div>
+            </div>
+        </section>
+
+        
+        <section class="card">
+            <h2>System Identity Namespace Indexes</h2>
+            <div id="usersTableContainer"></div>
+        </section>
+
+        <!-- Global Activity Audit Log Matrix Grid -->
+        <section class="card">
+            <h2>All Logged Shared Sessions</h2>
+            <div id="globalSessionsContainer"></div>
+        </section>
+    </main>
+
+    <script>
+        function getAllUsers() {
+            const stored = localStorage.getItem('st_users');
+            if (stored) return JSON.parse(stored);
+            return [{ id: 1, name: 'Demo User', email: 'demo@test.com', password: 'alexisDEAD111!' }];
+        }
+
+        function getAllSessions() {
+            const stored = localStorage.getItem('st_sessions');
+            return stored ? JSON.parse(stored) : [];
+        }
+
+        function saveUsers(users) {
+            localStorage.setItem('st_users', JSON.stringify(users));
+            renderAdminDashboard();
+        }
+
+        function saveSessions(sessions) {
+            localStorage.setItem('st_sessions', JSON.stringify(sessions));
+            renderAdminDashboard();
+        }
+
+        function deleteUser(userId) {
+            if (confirm("Are you sure you want to delete this user and all of their workout history?")) {
+                const users = getAllUsers().filter(u => u.id != userId);
+                saveUsers(users);
+
+                const sessions = getAllSessions().filter(s => s.userId != userId);
+                saveSessions(sessions);
+            }
+        }
+
+        function deleteSession(sessionId) {
+            if (confirm("Are you sure you want to remove this data entry?")) {
+                const sessions = getAllSessions().filter(s => s.id != sessionId);
+                saveSessions(sessions);
+            }
+        }
+
+        function renderAdminDashboard() {
+            const users = getAllUsers();
+            const sessions = getAllSessions();
+
+            document.getElementById('totalUsers').textContent = users.length;
+            document.getElementById('totalSessions').textContent = sessions.length;
+
+            const usersContainer = document.getElementById('usersTableContainer');
+            if (users.length === 0) {
+                usersContainer.innerHTML = '<p class="empty-msg">No entries logged in the system.</p>';
+            } else {
+                let uHtml = '<table><thead><tr><th>ID</th><th>Name</th><th>Email Space</th><th>Action Scope</th></tr></thead><tbody>';
+                users.forEach(u => {
+                    uHtml += `<tr>
+                        <td>${u.id}</td>
+                        <td>${u.name}</td>
+                        <td>${u.email}</td>
+                        <td>`;
+                    if (u.id !== 1) {
+                        uHtml += `<button class="btn btn-danger" style="margin-top:0;" onclick="deleteUser(${u.id})">Terminate Profile</button>`;
+                    } else {
+                        uHtml += '<span style="color:var(--text-muted); font-size:12px; font-weight:bold;">SYSTEM ANCHOR PROTECTED</span>';
+                    }
+                    uHtml += '</td></tr>';
+                });
+                uHtml += '</tbody></table>';
+                usersContainer.innerHTML = uHtml;
+            }
+
+            const sessionsContainer = document.getElementById('globalSessionsContainer');
+            if (sessions.length === 0) {
+                sessionsContainer.innerHTML = '<p class="empty-msg">No logs currently live across storage arrays.</p>';
+            } else {
+                const userMap = {};
+                users.forEach(u => userMap[u.id] = u.name);
+                sessions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                let sHtml = '<table><thead><tr><th>Ownership Profile</th><th>Date Stamp</th><th>Type Split</th><th>Duration Range</th><th>Notes Log</th><th>Action Scope</th></tr></thead><tbody>';
+                sessions.forEach(s => {
+                    const owner = userMap[s.userId] || `Ghost Space Index Key (${s.userId})`;
+                    sHtml += `<tr>
+                        <td><strong>${owner}</strong></td>
+                        <td>${s.date}</td>
+                        <td>${s.subject}</td>
+                        <td>${s.durationMins} min</td>
+                        <td>${s.notes || '—'}</td>
+                        <td><button class="btn btn-danger" style="margin-top:0;" onclick="deleteSession(${s.id})">Purge Entry Object</button></td>
+                    </tr>`;
+                });
+                sHtml += '</tbody></table>';
+                sessionsContainer.innerHTML = sHtml;
+            }
+        }
+
+        window.onload = renderAdminDashboard;
+    </script>
+</body>
+</html>
