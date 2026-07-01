@@ -1,7 +1,6 @@
 /* Custom variables for accessible color theme management */
 :root {
-    --bg-main: #1e1e1e;
-    --bg-card: #2d2d2d;
+
     --text-main: #ffffff;
     --text-muted: #b3b3b3;
     --accent-amber: #f39c12;
@@ -10,25 +9,23 @@
     --btn-danger: #c0392b;
     --btn-danger-hover: #e74c3c;
     --border-color: #404040;
+
 }
 
 body {
     font-family: 'Helvetica Neue', Arial, sans-serif;
-    background-color: var(--bg-main);
+
     color: var(--text-main);
     margin: 0;
     padding: 0;
     line-height: 1.5;
-}
 
-.topbar {
-    background-color: #111111;
-    border-bottom: 3px solid var(--accent-amber);
     color: var(--text-main);
     padding: 14px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+
 }
 
 .topbar h1 {
@@ -44,12 +41,7 @@ body {
 }
 
 .card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-top: 4px solid var(--accent-amber);
-    border-radius: 6px;
-    padding: 24px;
-    margin-bottom: 24px;
+
 }
 
 .card h2 {
@@ -59,6 +51,7 @@ body {
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 10px;
 }
+
 
 label {
     display: block;
@@ -72,7 +65,7 @@ label {
 input, select, textarea {
     width: 100%;
     padding: 10px;
-    background-color: #111111;
+
     border: 1px solid var(--border-color);
     border-radius: 4px;
     font-size: 14px;
@@ -114,6 +107,7 @@ input:focus, textarea:focus {
     background-color: var(--btn-danger-hover);
 }
 
+
 .error-msg {
     color: #ff6b6b;
     font-size: 14px;
@@ -128,6 +122,7 @@ table {
     margin-top: 12px;
     background: #252525;
 }
+
 
 th {
     background-color: #111111;
@@ -173,15 +168,7 @@ tr:hover {
     display: flex;
     gap: 16px;
     margin-bottom: 24px;
-}
 
-.stat-box {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    padding: 16px 20px;
-    flex: 1;
-    text-align: center;
 }
 
 .stat-box .stat-num {

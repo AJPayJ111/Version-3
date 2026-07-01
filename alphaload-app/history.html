@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlphaLoad - History</title>
+    <link rel="stylesheet" href="design.css">
+</head>
+<body>
+    <header class="topbar">
+        <h1>📜 History</h1>
+        <button class="btn btn-primary" style="margin-top:0;" onclick="window.location.href='main.html'">Back to Dashboard</button>
+    </header>
+
+    <main class="container">
+        <section class="card">
+            <h2>Training History Calendar</h2>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+                <div style="color:var(--text-muted);">Browse your logged workouts and recovery days in a stylish month view.</div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <button class="btn btn-primary" type="button" onclick="adjustHistoryMonth(-1)">Previous</button>
+                    <span id="historyMonthLabel" style="font-weight:bold; color:var(--accent-amber);"></span>
+                    <button class="btn btn-primary" type="button" onclick="adjustHistoryMonth(1)">Next</button>
+                </div>
+            </div>
+            <div id="historyCalendar" class="calendar-grid"></div>
+        </section>
+
+        <section class="card">
+            <h2>Recent Logs</h2>
+            <div id="historyLogsTable"></div>
+        </section>
+    </main>
+
+    <script src="thejava.js"></script>
+    <script>
+        function getHistoryData() {
+            const sessions = getSessions();
+            const scheduleEntries = getScheduleEntries();
+            return { sessions, scheduleEntries };
+        }
+
+        function renderHistoryCalendar() {
+            const calendarRoot = document.getElementById('historyCalendar');
+            if (!calendarRoot) return;
+            const { sessions, scheduleEntries } = getHistoryData();
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth();
+            const firstOfMonth = new Date(year, month, 1);
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const startDay = firstOfMonth.getDay();
+            const labels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+            const grid = [];
+
+            labels.forEach(day => {
+                grid.push(`<div class="calendar-cell" style="font-weight:bold; justify-content:center; color:var(--accent-amber);">${day}</div>`);
+            });
+
+            for (let blank = 0; blank < startDay; blank++) {
+                grid.push('<div class="calendar-cell"></div>');
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateValue = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const daySessions = sessions.filter(item => item.date === dateValue);
+                const daySchedule = scheduleEntries.filter(item => item.date === dateValue);
+                const hasEntry = daySessions.length || daySchedule.length;
+                const itemList = [];
+                if (daySessions.length) itemList.push(...daySessions.map(item => `${item.subject}`));
+                if (daySchedule.length) itemList.push(...daySchedule.map(item => item.type));
+                const cellClass = hasEntry ? 'calendar-cell has-entry' : 'calendar-cell';
+                grid.push(`
+                    <div class="${cellClass}">
+                        <div class="cell-date">${day}</div>
+                        <div class="cell-items">${itemList.slice(0, 3).join('<br>') || 'No entries'}</div>
+                    </div>
+                `);
+            }
+
+            calendarRoot.innerHTML = grid.join('');
+        }
+
+        function renderHistoryLogsTable() {
+            const container = document.getElementById('historyLogsTable');
+            if (!container) return;
+            const { sessions, scheduleEntries } = getHistoryData();
+            const combined = [
+                ...sessions.map(s => ({ type: 'Workout', date: s.date, title: s.subject, notes: s.notes || '' })),
+                ...scheduleEntries.map(s => ({ type: s.type, date: s.date, title: s.type, notes: s.notes || '' }))
+            ];
+            if (!combined.length) {
+                container.innerHTML = '<p style="color:var(--text-muted); font-size:14px;">No history entries yet. Log a workout or recovery day to see them here.</p>';
+                return;
+            }
+            combined.sort((a, b) => new Date(b.date) - new Date(a.date));
+            container.innerHTML = `
+                <table>
+                    <thead><tr><th>Date</th><th>Type</th><th>Title</th><th>Notes</th></tr></thead>
+                    <tbody>${combined.map(entry => `
+                        <tr>
+                            <td>${entry.date}</td>
+                            <td>${entry.type}</td>
+                            <td>${entry.title}</td>
+                            <td>${entry.notes || '—'}</td>
+                        </tr>
+                    `).join('')}</tbody>
+                </table>
+            `;
+        }
+
+        let historyCalendarYear = new Date().getFullYear();
+        let historyCalendarMonth = new Date().getMonth();
+
+        function renderHistoryCalendar() {
+            const calendarRoot = document.getElementById('historyCalendar');
+            const monthLabel = document.getElementById('historyMonthLabel');
+            if (!calendarRoot || !monthLabel) return;
+            const { sessions, scheduleEntries } = getHistoryData();
+            const year = historyCalendarYear;
+            const month = historyCalendarMonth;
+            const firstOfMonth = new Date(year, month, 1);
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const startDay = firstOfMonth.getDay();
+            const labels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+            const grid = [];
+            const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            monthLabel.textContent = `${monthNames[month]} ${year}`;
+
+            labels.forEach(day => {
+                grid.push(`<div class="calendar-cell" style="font-weight:bold; justify-content:center; color:var(--accent-amber);">${day}</div>`);
+            });
+
+            for (let blank = 0; blank < startDay; blank++) {
+                grid.push('<div class="calendar-cell"></div>');
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateValue = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const daySessions = sessions.filter(item => item.date === dateValue);
+                const daySchedule = scheduleEntries.filter(item => item.date === dateValue);
+                const hasEntry = daySessions.length || daySchedule.length;
+                const itemList = [];
+                if (daySessions.length) itemList.push(...daySessions.map(item => `${item.subject}`));
+                if (daySchedule.length) itemList.push(...daySchedule.map(item => item.type));
+                const cellClass = hasEntry ? 'calendar-cell has-entry' : 'calendar-cell';
+                grid.push(`
+                    <div class="${cellClass}">
+                        <div class="cell-date">${day}</div>
+                        <div class="cell-items">${itemList.slice(0, 3).join('<br>') || 'No entries'}</div>
+                    </div>
+                `);
+            }
+
+            calendarRoot.innerHTML = grid.join('');
+        }
+
+        function adjustHistoryMonth(delta) {
+            historyCalendarMonth += delta;
+            if (historyCalendarMonth < 0) {
+                historyCalendarMonth = 11;
+                historyCalendarYear -= 1;
+            }
+            if (historyCalendarMonth > 11) {
+                historyCalendarMonth = 0;
+                historyCalendarYear += 1;
+            }
+            renderHistoryCalendar();
+            renderHistoryLogsTable();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderHistoryCalendar();
+            renderHistoryLogsTable();
+        });
+    </script>
+</body>
+</html>
