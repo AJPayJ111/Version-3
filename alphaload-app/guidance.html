@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlphaLoad - Guidance</title>
+    <link rel="stylesheet" href="design.css">
+</head>
+<body>
+    <header class="topbar">
+        <h1>🧭 Guidance Hub</h1>
+        <button class="btn btn-primary" style="margin-top:0;" onclick="window.location.href='main.html'">Back to Dashboard</button>
+    </header>
+
+    <main class="container">
+        <section class="card">
+            <h2>🗓️ Beginner Workout Plans</h2>
+            <div class="guidance-grid">
+                <div class="guidance-card">
+                    <h3>Foundation Plan</h3>
+                    <ul>
+                        <li>3 days per week</li>
+                        <li>2 sets of 10–12 reps on each machine</li>
+                        <li>Focus on steady form and breathing</li>
+                    </ul>
+                </div>
+                <div class="guidance-card">
+                    <h3>Strength Starter</h3>
+                    <ul>
+                        <li>4 days per week</li>
+                        <li>Use lighter weights for the first 2 weeks</li>
+                        <li>Add 2.5–5kg only when form feels solid</li>
+                    </ul>
+                </div>
+                <div class="guidance-card">
+                    <h3>Recovery + Cardio</h3>
+                    <ul>
+                        <li>1–2 easy cardio sessions</li>
+                        <li>Mobility work after training</li>
+                        <li>Rest days stay just as important as gym days</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>🎥 Machine Tutorials & Helpful Guides</h2>
+            <div id="guidanceVideoList"></div>
+        </section>
+    </main>
+
+    <script src="thejava.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('guidanceVideoList');
+            const resources = JSON.parse(localStorage.getItem('st_videoResources') || '[]');
+            const fallback = [
+                { title: 'How to use the leg press safely', description: 'Learn foot placement, range of motion, and breathing cues.', url: 'https://www.youtube.com/results?search_query=leg+press+beginner+guide', category: 'Machine' },
+                { title: 'Lat pulldown form essentials', description: 'Follow a simple sequence for posture, grip, and smooth control.', url: 'https://www.youtube.com/results?search_query=lat+pulldown+beginner+form', category: 'Machine' },
+                { title: 'Beginner gym checklist', description: 'A short primer on warmups, hydration, and how to start a first session with confidence.', url: 'https://www.youtube.com/results?search_query=beginner+gym+checklist', category: 'Tips' }
+            ];
+            const list = resources.length ? resources : fallback;
+            container.innerHTML = list.map(resource => `
+                <div class="resource-item">
+                    <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap;">
+                        <div>
+                            <strong>${resource.title}</strong>
+                            <div style="color:var(--text-muted); font-size:13px; margin-top:4px;">${resource.description}</div>
+                        </div>
+                        <span class="tag">${resource.category || 'Guide'}</span>
+                    </div>
+                    <a class="resource-link" href="${resource.url}" target="_blank" rel="noopener noreferrer">Watch video</a>
+                </div>
+            `).join('');
+        });
+    </script>
+</body>
+</html>

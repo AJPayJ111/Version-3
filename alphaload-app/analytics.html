@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlphaLoad - Analytics</title>
+    <link rel="stylesheet" href="design.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <header class="topbar">
+        <h1>📊 Analytics Center</h1>
+        <button class="btn btn-primary" style="margin-top:0;" onclick="window.location.href='main.html'">Back to Dashboard</button>
+    </header>
+
+    <main class="container">
+        <section class="card">
+            <h2>🤖 Training Trend</h2>
+            <div id="mlModelOutput" style="font-weight:bold; margin-bottom:10px; color:var(--accent-amber);"></div>
+            <div class="ml-container">
+                <canvas id="regressionChart" style="max-height:280px; width:100%;"></canvas>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>📈 Training Volume Trend</h2>
+            <div class="ml-container">
+                <canvas id="volumeTrendChart" style="max-height:280px; width:100%;"></canvas>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>🔥 Calorie Intake</h2>
+            <div class="ml-container">
+                <canvas id="calorieChart" style="max-height:280px; width:100%;"></canvas>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>🏋️ Machine Volume Breakdown</h2>
+            <div class="ml-container">
+                <canvas id="machineVolumeChart" style="max-height:280px; width:100%;"></canvas>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>📋 Workout Summary</h2>
+            <div id="analyticsTableContainer"></div>
+        </section>
+
+        <section class="card">
+            <h2>🥗 Meal Summary</h2>
+            <div id="mealTableContainer"></div>
+        </section>
+    </main>
+
+    <script src="thejava.js"></script>
+    <script>
+        function getSessions() {
+            const stored = localStorage.getItem('st_sessions');
+            const currentUserId = Number(localStorage.getItem('st_currentUser') || 0);
+            if (!stored) return [];
+            const all = JSON.parse(stored);
+            return all.filter(s => Number(s.userId) === Number(currentUserId));
+        }
+
+        function getMeals() {
+            const stored = localStorage.getItem('st_meals');
+            const currentUserId = Number(localStorage.getItem('st_currentUser') || 0);
+            if (!stored) return [];
+            const all = JSON.parse(stored);
+            return all.filter(m => Number(m.userId) === Number(currentUserId));
+        }
+
+        function getSessionTrainingVolume(session) {
+            const sets = Number(session.sets ?? 0);
+            const reps = Number(session.reps ?? 0);
+            const weight = Number(session.weight ?? 0);
+            if (sets > 0 && reps > 0 && weight > 0) return sets * reps * weight;
+            return Number(session.volumeScore ?? session.durationMins ?? 0);
+        }
+
+        function computeLinearRegression(sessions) {
+            if (sessions.length < 2) return null;
+            const sorted = [...sessions].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const X = sorted.map((_, index) => index + 1);
+            const y = sorted.map(s => getSessionTrainingVolume(s));
+            const n = X.length;
+            let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+            for (let i = 0; i < n; i++) {
+                sumX += X[i];
+                sumY += y[i];
+                sumXY += X[i] * y[i];
+                sumXX += X[i] * X[i];
+            }
+            const slopeNum = (n * sumXY) - (sumX * sumY);
+            const slopeDen = (n * sumXX) - (sumX * sumX);
+            if (slopeDen === 0) return null;
+            const slope = slopeNum / slopeDen;
+            const intercept = (sumY - (slope * sumX)) / n;
+            const nextX = n + 1;
+            const projectedNextValue = (slope * nextX) + intercept;
+            return {
+                labels: X.map(val => `Log ${val}`),
+                actuals: y,
+                fittedLine: X.map(val => (slope * val) + intercept),
+                prediction: { x: `Log ${nextX}`, y: Math.max(0, projectedNextValue) }
+            };
+        }
+
+        function renderMLVisualization(regressionData) {
+            const chartCanvas = document.getElementById('regressionChart');
+            const displayPanel = document.getElementById('mlModelOutput');
+            if (!chartCanvas || !displayPanel) return;
+            if (!regressionData) {
+                displayPanel.textContent = 'Not enough sessions yet to calculate a trend.';
+                return;
+            }
+            displayPanel.textContent = `Projected next volume: ${regressionData.prediction.y.toFixed(1)} pts`;
+            const ctx = chartCanvas.getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [...regressionData.labels, regressionData.prediction.x],
+                    datasets: [
+                        { label: 'Actual Volume', data: [...regressionData.actuals, null], borderColor: '#2980b9', backgroundColor: '#2980b9', borderWidth: 0, pointRadius: 6, showLine: false },
+                        { label: 'Trend Line', data: [...regressionData.fittedLine, regressionData.prediction.y], borderColor: '#f39c12', borderWidth: 2, fill: false, pointRadius: 0 },
+                        { label: 'Next Prediction', data: [...regressionData.labels.map(() => null), regressionData.prediction.y], borderColor: '#2ecc71', backgroundColor: '#2ecc71', pointStyle: 'triangle', pointRadius: 10, showLine: false }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        function renderAnalyticsTables(sessions) {
+            const container = document.getElementById('analyticsTableContainer');
+            if (!container) return;
+            if (!sessions.length) {
+                container.innerHTML = '<p style="color:var(--text-muted); font-size:14px;">No analytics data yet.</p>';
+                return;
+            }
+            const totals = sessions.reduce((acc, session) => {
+                const machine = session.subject || 'Unknown';
+                const volume = getSessionTrainingVolume(session);
+                acc[machine] = (acc[machine] || 0) + volume;
+                return acc;
+            }, {});
+            container.innerHTML = `
+                <table>
+                    <thead><tr><th>Machine</th><th>Volume</th></tr></thead>
+                    <tbody>${Object.entries(totals).sort((a, b) => b[1] - a[1]).map(([machine, volume]) => `<tr><td>${machine}</td><td>${Math.round(volume)}</td></tr>`).join('')}</tbody>
+                </table>
+            `;
+        }
+
+        function renderAdditionalCharts(sessions) {
+            const sorted = [...sessions].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const labels = sorted.map(session => session.date);
+            const volumes = sorted.map(session => getSessionTrainingVolume(session));
+            const volumeCtx = document.getElementById('volumeTrendChart')?.getContext('2d');
+            const machineCtx = document.getElementById('machineVolumeChart')?.getContext('2d');
+            const calorieCtx = document.getElementById('calorieChart')?.getContext('2d');
+            if (volumeCtx) new Chart(volumeCtx, { type: 'bar', data: { labels, datasets: [{ label: 'Training Volume', data: volumes, backgroundColor: '#2980b9' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } } });
+            const machineTotals = sorted.reduce((acc, session) => { const name = session.subject || 'Unknown'; acc[name] = (acc[name] || 0) + getSessionTrainingVolume(session); return acc; }, {});
+            if (machineCtx) new Chart(machineCtx, { type: 'doughnut', data: { labels: Object.keys(machineTotals), datasets: [{ data: Object.values(machineTotals), backgroundColor: ['#2980b9', '#f39c12', '#2ecc71', '#9b59b6', '#e74c3c', '#1abc9c'] }] }, options: { responsive: true, maintainAspectRatio: false } });
+            const meals = getMeals();
+            const calorieLabels = meals.length ? [...new Set(meals.map(meal => meal.date))].sort() : [];
+            const calorieData = calorieLabels.map(date => meals.filter(meal => meal.date === date).reduce((sum, meal) => sum + (meal.calories || 0), 0));
+            if (calorieCtx) new Chart(calorieCtx, { type: 'line', data: { labels: calorieLabels, datasets: [{ label: 'Calories', data: calorieData, borderColor: '#f39c12', backgroundColor: '#f39c12', fill: false, tension: 0.2 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } } });
+        }
+
+        function renderMealTable(meals) {
+            const container = document.getElementById('mealTableContainer');
+            if (!container) return;
+            if (!meals.length) {
+                container.innerHTML = '<p style="color:var(--text-muted); font-size:14px;">No meals logged yet.</p>';
+                return;
+            }
+            container.innerHTML = `
+                <table>
+                    <thead><tr><th>Date</th><th>Meal</th><th>Protein</th><th>Calories</th><th>Notes</th></tr></thead>
+                    <tbody>${meals.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).map(meal => `<tr><td>${meal.date}</td><td>${meal.name}</td><td>${meal.protein}g</td><td>${meal.calories}</td><td>${meal.notes || '—'}</td></tr>`).join('')}</tbody>
+                </table>
+            `;
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const sessions = getSessions();
+            renderMLVisualization(computeLinearRegression(sessions));
+            renderAnalyticsTables(sessions);
+            renderAdditionalCharts(sessions);
+            renderMealTable(getMeals());
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlphaLoad - Settings</title>
+    <link rel="stylesheet" href="design.css">
+</head>
+<body>
+    <header class="topbar">
+        <h1>⚙️ Settings</h1>
+        <button class="btn btn-primary" style="margin-top:0;" onclick="window.location.href='main.html'">Back to Dashboard</button>
+    </header>
+
+    <main class="container">
+        <section class="card">
+            <h2>Appearance</h2>
+            <label for="themeColorSelect">Theme color</label>
+            <select id="themeColorSelect" onchange="setThemeColor(this.value)">
+                <option value="#f39c12">Amber</option>
+                <option value="#2980b9">Blue</option>
+                <option value="#2ecc71">Green</option>
+                <option value="#9b59b6">Purple</option>
+                <option value="#e74c3c">Red</option>
+            </select>
+
+            <label for="zoomRange">Zoom level</label>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <input type="range" id="zoomRange" min="0.75" max="1.5" step="0.05" value="1" onchange="setZoom(this.value)">
+                <span id="zoomValue">100%</span>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Language</h2>
+            <label for="settingsLanguage">App language</label>
+            <select id="settingsLanguage" onchange="setLanguage(this.value)">
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+            </select>
+        </section>
+
+        <section class="card">
+            <h2>Preferences</h2>
+            <p style="color:var(--text-muted);">These controls let you personalize the app appearance and scale everything to your preference.</p>
+            <button class="btn btn-primary" type="button" onclick="resetAppPreferences()">Reset to Default</button>
+        </section>
+    </main>
+
+    <script src="thejava.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            loadAppSettings();
+        });
+    </script>
+</body>
+</html>
