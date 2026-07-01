@@ -59,7 +59,7 @@
         function getSessions() {
             const stored = localStorage.getItem('st_sessions');
             const currentUserId = Number(localStorage.getItem('st_currentUser') || 0);
-            if (!stored) return [];
+            if (!stored || !currentUserId) return [];
             const all = JSON.parse(stored);
             return all.filter(s => Number(s.userId) === Number(currentUserId));
         }
@@ -67,7 +67,7 @@
         function getMeals() {
             const stored = localStorage.getItem('st_meals');
             const currentUserId = Number(localStorage.getItem('st_currentUser') || 0);
-            if (!stored) return [];
+            if (!stored || !currentUserId) return [];
             const all = JSON.parse(stored);
             return all.filter(m => Number(m.userId) === Number(currentUserId));
         }

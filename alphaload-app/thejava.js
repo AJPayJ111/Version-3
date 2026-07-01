@@ -14,24 +14,30 @@ let questTemplates = [
 ];
 
 // Core Abstraction Data Layers
+function normalizeUser(user) {
+    if (!user) return null;
+    const normalized = { ...user };
+    if (normalized.password && typeof normalized.password === 'object' && normalized.password.hash) {
+        normalized.password = normalized.password;
+    }
+    return normalized;
+}
+
 function getUsers() {
     const stored = localStorage.getItem('st_users');
     if (stored) {
-        const users = JSON.parse(stored);
-        if (!users.some(u => u.email === 'ai.info')) {
-            users.push({ id: 999, name: 'AI.info', email: 'ai.info', password: 'Ai.Info2026!' });
-            localStorage.setItem('st_users', JSON.stringify(users));
+        try {
+            const users = JSON.parse(stored).map(normalizeUser).filter(Boolean);
+            return users;
+        } catch (error) {
+            console.warn('Unable to parse stored users.', error);
         }
-        return users;
     }
-    return [
-        { id: 1, name: 'Demo User', email: 'demo@test.com', password: 'alexisDEAD111!' },
-        { id: 999, name: 'AI.info', email: 'ai.info', password: 'Ai.Info2026!' }
-    ];
+    return [];
 }
 
 function saveUsers(users) {
-    localStorage.setItem('st_users', JSON.stringify(users));
+    localStorage.setItem('st_users', JSON.stringify(users.map(normalizeUser).filter(Boolean)));
 }
 
 function getSessions() {
@@ -185,6 +191,24 @@ function loadAppSettings() {
         const zoomValue = document.getElementById('zoomValue');
         if (zoomValue) zoomValue.textContent = `${Math.round(prefs.zoom * 100)}%`;
     }
+    const modeControl = document.getElementById('appModeSelect');
+    if (modeControl) modeControl.value = prefs.appMode || 'dark';
+    applyAppMode(prefs.appMode || 'dark');
+}
+
+function applyAppMode(mode = 'dark') {
+    document.body.classList.remove('app-mode-dark', 'app-mode-grey', 'app-mode-white');
+    const normalizedMode = ['dark', 'grey', 'white'].includes(mode) ? mode : 'dark';
+    document.body.classList.add(`app-mode-${normalizedMode}`);
+    const prefs = getAppPreferences();
+    prefs.appMode = normalizedMode;
+    saveAppPreferences(prefs);
+}
+
+function setAppMode(mode) {
+    applyAppMode(mode);
+    const modeControl = document.getElementById('appModeSelect');
+    if (modeControl) modeControl.value = mode;
 }
 
 function setThemeColor(color) {
@@ -224,28 +248,65 @@ function resetAppPreferences() {
     applyThemeColor('#f39c12');
     setZoom(1);
     setLanguage('en');
+    applyAppMode('dark');
     const themeControl = document.getElementById('themeColorSelect');
     if (themeControl) themeControl.value = '#f39c12';
     const settingsLanguage = document.getElementById('settingsLanguage');
     if (settingsLanguage) settingsLanguage.value = 'en';
+    const modeControl = document.getElementById('appModeSelect');
+    if (modeControl) modeControl.value = 'dark';
 }
 
-function showLoginValidation(message) {
-    const overlay = document.getElementById('loginValidationOverlay');
-    const messageEl = document.getElementById('loginValidationMessage');
-    if (messageEl) messageEl.textContent = message;
-    if (overlay) {
-        overlay.style.display = 'flex';
-        overlay.setAttribute('aria-hidden', 'false');
+function persistSession(user, rememberMe = false) {
+    const userId = user && user.id ? String(user.id) : '';
+    if (!userId) return;
+
+    if (rememberMe) {
+        localStorage.setItem('st_currentUser', userId);
+        sessionStorage.removeItem('st_currentUser');
+    } else {
+        sessionStorage.setItem('st_currentUser', userId);
+        localStorage.removeItem('st_currentUser');
     }
 }
 
-function closeLoginValidation() {
-    const overlay = document.getElementById('loginValidationOverlay');
-    if (overlay) {
-        overlay.style.display = 'none';
-        overlay.setAttribute('aria-hidden', 'true');
+function clearAuthSession() {
+    localStorage.removeItem('st_currentUser');
+    sessionStorage.removeItem('st_currentUser');
+}
+
+function showForgotPassword() {
+    const box = document.getElementById('forgotPasswordBox');
+    if (box) {
+        box.style.display = box.style.display === 'block' ? 'none' : 'block';
     }
+}
+
+function handleForgotPassword() {
+    const emailInput = document.getElementById('recoveryEmail');
+    const email = emailInput ? emailInput.value.trim() : '';
+    if (!email) {
+        showAuthMessage('Enter the account email to continue.', 'error');
+        return;
+    }
+    showAuthMessage('If that email exists, a reset link has been prepared.', 'success');
+}
+
+function showAuthMessage(message, type = 'error', targetId = 'authStatus') {
+    const target = document.getElementById(targetId) || document.getElementById('settingsAuthStatus') || document.getElementById('authStatus');
+    if (!target) return;
+    target.textContent = message;
+    target.className = `auth-status ${type}`;
+}
+
+function clearAuthMessages() {
+    ['authStatus', 'registerStatus'].forEach(id => {
+        const target = document.getElementById(id);
+        if (target) {
+            target.textContent = '';
+            target.className = 'auth-status';
+        }
+    });
 }
 
 function isValidEmail(email) {
@@ -254,6 +315,133 @@ function isValidEmail(email) {
 
 function isStrongPassword(password) {
     return /[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password) && password.length >= 10;
+}
+
+function getPasswordStrength(password) {
+    if (!password) return { score: 0, label: 'Start typing', className: 'weak' };
+
+    const checks = [
+        password.length >= 10,
+        /[A-Z]/.test(password),
+        /[a-z]/.test(password),
+        /[0-9]/.test(password),
+        /[^A-Za-z0-9]/.test(password)
+    ];
+
+    const score = checks.filter(Boolean).length;
+    if (score <= 2) return { score, label: 'Weak', className: 'weak' };
+    if (score === 3 || score === 4) return { score, label: 'Good', className: 'good' };
+    return { score, label: 'Strong', className: 'strong' };
+}
+
+function updatePasswordStrength() {
+    const passwordInput = document.getElementById('regPassword');
+    const meter = document.getElementById('passwordStrengthMeter');
+    if (!passwordInput || !meter) return;
+
+    const { label, className } = getPasswordStrength(passwordInput.value);
+    meter.textContent = `Strength: ${label}`;
+    meter.className = `password-strength ${className}`;
+}
+
+function getAuthPreferences() {
+    const stored = localStorage.getItem('st_authPreferences');
+    if (stored) {
+        try {
+            return JSON.parse(stored);
+        } catch (error) {
+            return {};
+        }
+    }
+    return {};
+}
+
+function saveAuthPreferences(prefs) {
+    localStorage.setItem('st_authPreferences', JSON.stringify(prefs));
+}
+
+function applyLoginCustomization(themeName) {
+    const prefs = getAuthPreferences();
+    const selectedTheme = themeName || prefs.theme || 'midnight';
+    document.body.classList.remove('auth-theme-midnight', 'auth-theme-aurora', 'auth-theme-sunset');
+    document.body.classList.add(`auth-theme-${selectedTheme}`);
+    prefs.theme = selectedTheme;
+    saveAuthPreferences(prefs);
+}
+
+function togglePasswordVisibility(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+function getLoginLockoutState() {
+    const stored = localStorage.getItem('st_loginLockout');
+    if (!stored) return { attempts: 0, lockedUntil: 0 };
+    try {
+        const parsed = JSON.parse(stored);
+        return { attempts: Number(parsed.attempts || 0), lockedUntil: Number(parsed.lockedUntil || 0) };
+    } catch (error) {
+        return { attempts: 0, lockedUntil: 0 };
+    }
+}
+
+function saveLoginLockoutState(state) {
+    localStorage.setItem('st_loginLockout', JSON.stringify(state));
+}
+
+function applyLoginLockoutUI() {
+    const state = getLoginLockoutState();
+    const button = document.getElementById('loginButton');
+    const status = document.getElementById('authStatus');
+
+    if (state.lockedUntil > Date.now()) {
+        const remaining = Math.ceil((state.lockedUntil - Date.now()) / 1000);
+        if (button) button.disabled = true;
+        if (status) {
+            status.textContent = `Temporary lockout active: try again in ${remaining} seconds.`;
+            status.className = 'auth-status error';
+        }
+        return;
+    }
+
+    if (button) button.disabled = false;
+}
+
+function markFailedLogin() {
+    const state = getLoginLockoutState();
+    state.attempts += 1;
+    if (state.attempts >= 5) {
+        state.lockedUntil = Date.now() + 30000;
+    }
+    saveLoginLockoutState(state);
+    applyLoginLockoutUI();
+}
+
+function resetLoginLockoutState() {
+    saveLoginLockoutState({ attempts: 0, lockedUntil: 0 });
+    applyLoginLockoutUI();
+}
+
+function hashPasswordValue(password) {
+    let hash = 0;
+    for (let index = 0; index < password.length; index += 1) {
+        hash = ((hash << 5) - hash) + password.charCodeAt(index);
+        hash |= 0;
+    }
+    return `hash:${hash.toString(16)}`;
+}
+
+function createPasswordRecord(password) {
+    return { algorithm: 'simple-hash', hash: hashPasswordValue(password) };
+}
+
+function verifyStoredPassword(password, storedPassword) {
+    if (!storedPassword) return false;
+    if (typeof storedPassword === 'string') return storedPassword === password;
+    if (storedPassword.hash) return storedPassword.hash === hashPasswordValue(password);
+    if (storedPassword.value) return storedPassword.value === password;
+    return false;
 }
 
 function shadeColor(color, percent) {
@@ -321,47 +509,15 @@ function getCurrentUserName() {
 
 function seedDemoData() {
     const users = getUsers();
-    const aiUser = users.find(u => u.email === 'ai.info');
-    if (!aiUser) {
-        users.push({ id: 999, name: 'AI.info', email: 'ai.info', password: 'Ai.Info2026!' });
+    const assistantUser = users.find(u => (u.email || '').toLowerCase() === 'assistant.demo@alphaload.test');
+    if (!assistantUser) {
+        users.push({ id: 998, name: 'Assistant Demo', email: 'assistant.demo@alphaload.test', password: 'AlphaDemo2026!' });
         saveUsers(users);
-    }
-
-    const existingSessions = getSessions();
-    if (!existingSessions.length) {
-        const demoSessions = [
-            { id: 1001, userId: Number(currentUserId), date: '2026-06-24', subject: 'Leg Press', sets: 3, reps: 10, weight: 120, notes: 'Solid push', volumeScore: 3600, durationMins: 3600 },
-            { id: 1002, userId: Number(currentUserId), date: '2026-06-25', subject: 'Walking', sets: 1, reps: 1, weight: 1, notes: '8k steps', volumeScore: 8000, durationMins: 8000 },
-            { id: 1003, userId: Number(currentUserId), date: '2026-06-26', subject: 'Mobility', sets: 1, reps: 1, weight: 1, notes: 'Recovery flow', volumeScore: 1200, durationMins: 1200 },
-            { id: 1004, userId: Number(currentUserId), date: '2026-06-27', subject: 'Cardio Day', sets: 1, reps: 1, weight: 1, notes: 'Bike ride', volumeScore: 2500, durationMins: 2500 },
-            { id: 1005, userId: Number(currentUserId), date: '2026-06-28', subject: 'Chest Press', sets: 3, reps: 8, weight: 100, notes: 'Felt strong', volumeScore: 2400, durationMins: 2400 }
-        ];
-        saveSessions(demoSessions);
-    }
-
-    const existingMeals = getMeals();
-    if (!existingMeals.length) {
-        const demoMeals = [
-            { id: 2001, userId: Number(currentUserId), date: '2026-06-24', name: 'Chicken Rice Bowl', protein: 40, calories: 620, notes: 'Post-workout' },
-            { id: 2002, userId: Number(currentUserId), date: '2026-06-25', name: 'Salmon Salad', protein: 35, calories: 540, notes: 'Light lunch' },
-            { id: 2003, userId: Number(currentUserId), date: '2026-06-26', name: 'Greek Yogurt Bowl', protein: 25, calories: 320, notes: 'Recovery snack' },
-            { id: 2004, userId: Number(currentUserId), date: '2026-06-27', name: 'Turkey Wrap', protein: 30, calories: 480, notes: 'Pre-cardio' }
-        ];
-        saveMeals(demoMeals);
-    }
-
-    const existingSchedule = getScheduleEntries();
-    if (!existingSchedule.length) {
-        const demoSchedule = [
-            { id: 3001, userId: Number(currentUserId), date: '2026-06-24', type: 'Rest Day', notes: 'Recovery' },
-            { id: 3002, userId: Number(currentUserId), date: '2026-06-26', type: 'Cardio Day', notes: 'Easy bike ride' }
-        ];
-        saveScheduleEntries(demoSchedule);
     }
 
     const friendData = getFriendData();
     if (!friendData.friends.length && !friendData.requests.length) {
-        saveFriendData({ friends: [{ id: 999, name: 'AI.info', score: 84 }], requests: [] });
+        saveFriendData({ friends: [{ id: 998, name: 'Assistant Demo', score: 84 }], requests: [] });
     }
 }
 
@@ -412,90 +568,287 @@ function showPage(pageId) {
 }
 
 // Authentication Logic
-function doLogin() {
-    const email = document.getElementById('loginEmail').value.trim();
+async function doLogin() {
+    const state = getLoginLockoutState();
+    if (state.lockedUntil > Date.now()) {
+        showAuthMessage('Too many failed attempts. Please wait before trying again.', 'error');
+        return;
+    }
+
+    const identifier = document.getElementById('loginIdentifier').value.trim();
     const password = document.getElementById('loginPassword').value;
-    const errorEl = document.getElementById('loginError');
+    const rememberMe = document.getElementById('rememberMe').checked;
 
-    if (!email || !password) {
-        errorEl.textContent = 'Email and password are required.';
-        errorEl.style.display = 'block';
-        return;
-    }
-
-    if (!isValidEmail(email)) {
-        showLoginValidation('Your email must be in a valid format like name@domain.com.');
-        return;
-    }
-
-    if (!isStrongPassword(password)) {
-        showLoginValidation('Your password must be at least 10 characters long and include uppercase letters, lowercase letters, numbers, and symbols.');
+    if (!identifier || !password) {
+        showAuthMessage('Email/username and password are required.', 'error');
         return;
     }
 
     const users = getUsers();
-    const found = users.find(u => u.email === email && u.password === password);
+    const found = users.find(user => {
+        const email = (user.email || '').toLowerCase();
+        const username = (user.username || '').toLowerCase();
+        return email === identifier.toLowerCase() || username === identifier.toLowerCase();
+    });
 
     if (!found) {
-        errorEl.textContent = 'Access Denied: Invalid security signature credentials.';
-        errorEl.style.display = 'block';
+        markFailedLogin();
+        showAuthMessage('Incorrect sign-in details. Please try again.', 'error');
         return;
     }
 
-    if (errorEl) errorEl.style.display = 'none';
+    if (!verifyStoredPassword(password, found.password)) {
+        markFailedLogin();
+        showAuthMessage('Incorrect password. Please try again.', 'error');
+        return;
+    }
+
+    if (found.disabled) {
+        showAuthMessage('This account has been disabled.', 'error');
+        return;
+    }
+
+    resetLoginLockoutState();
     currentUserId = found.id;
-    localStorage.setItem('st_currentUser', found.id);
-    
+    found.lastLogin = new Date().toISOString();
+    saveUsers(users);
+    persistSession(found, rememberMe);
     showPage('page-dashboard');
-    document.getElementById('welcomeMsg').textContent = 'Authenticated: ' + found.name;
+    const welcome = document.getElementById('welcomeMsg');
+    if (welcome) welcome.textContent = `Signed in as ${found.displayName || found.username || found.email}`;
+    renderAuthProfile();
     refreshDashboard();
+    showAuthMessage('Signed in successfully.', 'success');
 }
 
-function doRegister() {
-    const name = document.getElementById('regName').value.trim();
+async function doRegister() {
+    const username = document.getElementById('regUsername').value.trim();
     const email = document.getElementById('regEmail').value.trim();
     const password = document.getElementById('regPassword').value;
-    const errorEl = document.getElementById('registerError');
+    const confirm = document.getElementById('regConfirmPassword').value;
+    const acceptTerms = document.getElementById('acceptTerms').checked;
 
-    if (!name || !email || !password) {
-        errorEl.textContent = 'Name, email, and password are required.';
-        errorEl.style.display = 'block';
+    if (!username || !email || !password || !confirm) {
+        showAuthMessage('Please complete all required fields.', 'error', 'registerStatus');
         return;
     }
 
     if (!isValidEmail(email)) {
-        showLoginValidation('Please enter a valid email address for your new account.');
+        showAuthMessage('Please enter a valid email address.', 'error', 'registerStatus');
         return;
     }
 
     if (!isStrongPassword(password)) {
-        showLoginValidation('Your password must be at least 10 characters and include uppercase letters, lowercase letters, numbers, and symbols.');
+        showAuthMessage('Password must be at least 10 characters and include uppercase, lowercase, a number, and a symbol.', 'error', 'registerStatus');
+        return;
+    }
+
+    if (password !== confirm) {
+        showAuthMessage('Passwords do not match.', 'error', 'registerStatus');
+        return;
+    }
+
+    if (!acceptTerms) {
+        showAuthMessage('Please accept the terms and conditions.', 'error', 'registerStatus');
         return;
     }
 
     const users = getUsers();
-    if (users.some(u => u.email === email)) {
-        errorEl.textContent = 'This email is already registered.';
-        errorEl.style.display = 'block';
+    const usernameExists = users.some(user => (user.username || '').toLowerCase() === username.toLowerCase());
+    const emailExists = users.some(user => (user.email || '').toLowerCase() === email.toLowerCase());
+
+    if (usernameExists || emailExists) {
+        showAuthMessage('That username or email is already registered.', 'error', 'registerStatus');
         return;
     }
 
-    const newUser = { id: Date.now(), name, email, password };
+    const newUser = {
+        id: Date.now(),
+        username,
+        email,
+        displayName: username,
+        password: createPasswordRecord(password),
+        createdAt: new Date().toISOString(),
+        lastLogin: null,
+        lastSeenAt: new Date().toISOString(),
+        emailVerified: false,
+        profileImage: '',
+        disabled: false
+    };
+
     users.push(newUser);
     saveUsers(users);
-
     currentUserId = newUser.id;
-    localStorage.setItem('st_currentUser', newUser.id);
+    persistSession(newUser, true);
     showPage('page-dashboard');
-    document.getElementById('welcomeMsg').textContent = 'Registered: ' + newUser.name;
+    const welcome = document.getElementById('welcomeMsg');
+    if (welcome) welcome.textContent = `Welcome, ${newUser.displayName}`;
+    renderAuthProfile();
     refreshDashboard();
+    showAuthMessage('Account created successfully. Your email is pending verification.', 'success', 'registerStatus');
 }
 
 function doLogout() {
     currentUserId = null;
-    localStorage.removeItem('st_currentUser');
+    clearAuthSession();
     sessionStorage.removeItem('adminUnlocked');
     showPage('page-login');
+    clearAuthMessages();
+}
+
+function renderAuthProfile() {
+    const panel = document.getElementById('authProfileCard');
+    const user = getCurrentAuthUser();
+    if (!panel) return;
+    if (!user) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    panel.style.display = 'block';
+    const summary = document.getElementById('profileSummary');
+    if (summary) {
+        summary.textContent = `${user.displayName || user.username || user.email} • ${user.emailVerified ? 'Verified' : 'Verification pending'}`;
+    }
+
+    const nameInput = document.getElementById('profileName');
+    const usernameInput = document.getElementById('profileUsername');
+    const emailInput = document.getElementById('profileEmail');
+    if (nameInput) nameInput.value = user.displayName || '';
+    if (usernameInput) usernameInput.value = user.username || '';
+    if (emailInput) emailInput.value = user.email || '';
+}
+
+function getCurrentAuthUser() {
+    if (!currentUserId) {
+        const storedUserId = localStorage.getItem('st_currentUser') || sessionStorage.getItem('st_currentUser');
+        if (!storedUserId) return null;
+        currentUserId = Number(storedUserId);
+    }
+    return getUsers().find(user => Number(user.id) === Number(currentUserId)) || null;
+}
+
+function saveProfile() {
+    const user = getCurrentAuthUser();
+    if (!user) return;
+
+    const nameInput = document.getElementById('profileName');
+    const usernameInput = document.getElementById('profileUsername');
+    const emailInput = document.getElementById('profileEmail');
+    const pictureInput = document.getElementById('profilePicture');
+
+    const users = getUsers();
+    const target = users.find(entry => Number(entry.id) === Number(user.id));
+    if (!target) return;
+
+    const nextName = nameInput.value.trim();
+    const nextUsername = usernameInput.value.trim();
+    const nextEmail = emailInput.value.trim();
+
+    if (!nextName || !nextUsername || !nextEmail) {
+        showAuthMessage('Display name, username, and email are required.', 'error');
+        return;
+    }
+
+    const usernameTaken = users.some(entry => Number(entry.id) !== Number(target.id) && (entry.username || '').toLowerCase() === nextUsername.toLowerCase());
+    const emailTaken = users.some(entry => Number(entry.id) !== Number(target.id) && (entry.email || '').toLowerCase() === nextEmail.toLowerCase());
+    if (usernameTaken || emailTaken) {
+        showAuthMessage('That username or email is already in use.', 'error');
+        return;
+    }
+
+    target.displayName = nextName;
+    target.username = nextUsername;
+    target.email = nextEmail;
+    target.lastSeenAt = new Date().toISOString();
+
+    if (pictureInput && pictureInput.files && pictureInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = () => {
+            target.profileImage = reader.result;
+            saveUsers(users);
+            renderAuthProfile();
+            showAuthMessage('Profile updated successfully.', 'success');
+        };
+        reader.readAsDataURL(pictureInput.files[0]);
+        return;
+    }
+
+    saveUsers(users);
+    renderAuthProfile();
+    showAuthMessage('Profile updated successfully.', 'success');
+}
+
+function changePasswordFromProfile() {
+    const user = getCurrentAuthUser();
+    if (!user) return;
+
+    const currentPassword = document.getElementById('profileCurrentPassword').value;
+    const newPassword = document.getElementById('profileNewPassword').value;
+    const confirmPassword = document.getElementById('profileConfirmPassword').value;
+
+    if (!verifyStoredPassword(currentPassword, user.password)) {
+        showAuthMessage('Your current password is incorrect.', 'error');
+        return;
+    }
+
+    if (!isStrongPassword(newPassword)) {
+        showAuthMessage('New password must be at least 10 characters and include uppercase, lowercase, a number, and a symbol.', 'error');
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        showAuthMessage('New passwords do not match.', 'error');
+        return;
+    }
+
+    const users = getUsers();
+    const target = users.find(entry => Number(entry.id) === Number(user.id));
+    if (!target) return;
+    target.password = createPasswordRecord(newPassword);
+    saveUsers(users);
+    document.getElementById('profileCurrentPassword').value = '';
+    document.getElementById('profileNewPassword').value = '';
+    document.getElementById('profileConfirmPassword').value = '';
+    showAuthMessage('Password updated successfully.', 'success');
+}
+
+function requestEmailVerification() {
+    const user = getCurrentAuthUser();
+    if (!user) return;
+    const users = getUsers();
+    const target = users.find(entry => Number(entry.id) === Number(user.id));
+    if (!target) return;
+    target.emailVerified = true;
+    saveUsers(users);
+    renderAuthProfile();
+    showAuthMessage('Email verified successfully.', 'success');
+}
+
+function logoutAllDevices() {
+    const user = getCurrentAuthUser();
+    if (!user) return;
+    const users = getUsers();
+    const target = users.find(entry => Number(entry.id) === Number(user.id));
+    if (target) {
+        target.lastSeenAt = new Date().toISOString();
+        saveUsers(users);
+    }
+    clearAuthSession();
+    showPage('page-login');
+    showAuthMessage('You have been signed out from all devices.', 'success');
+}
+
+function handleDeleteAccount() {
+    const user = getCurrentAuthUser();
+    if (!user) return;
+    if (!window.confirm('Delete this account permanently?')) return;
+    const users = getUsers().filter(entry => Number(entry.id) !== Number(user.id));
+    saveUsers(users);
+    clearAuthSession();
+    currentUserId = null;
+    showPage('page-login');
+    showAuthMessage('Account deleted. Create a new account to continue.', 'success');
 }
 
 function addSession() {
@@ -689,6 +1042,13 @@ function deleteScheduleEntry(entryId) {
     if (!confirm('Remove this rest/cardio entry?')) return;
     const entries = getScheduleEntries().filter(entry => Number(entry.id) !== Number(entryId));
     saveScheduleEntries(entries);
+    refreshDashboard();
+}
+
+function deleteMeal(mealId) {
+    if (!confirm('Remove this meal log?')) return;
+    const meals = getMeals().filter(meal => Number(meal.id) !== Number(mealId));
+    saveMeals(meals);
     refreshDashboard();
 }
 
@@ -1014,6 +1374,7 @@ function renderMealTable(meals) {
                 <td>${meal.protein}g</td>
                 <td>${meal.calories}</td>
                 <td>${meal.notes || '—'}</td>
+                <td><button class="btn btn-danger" style="margin-top:0; padding:6px 10px; font-size:12px;" onclick="deleteMeal(${meal.id})">Delete</button></td>
             </tr>
         `)
         .join('');
@@ -1021,7 +1382,7 @@ function renderMealTable(meals) {
     container.innerHTML = `
         <table>
             <thead>
-                <tr><th>Date</th><th>Meal</th><th>Protein</th><th>Calories</th><th>Notes</th></tr>
+                <tr><th>Date</th><th>Meal</th><th>Protein</th><th>Calories</th><th>Notes</th><th>Action</th></tr>
             </thead>
             <tbody>${rows}</tbody>
         </table>
@@ -1032,14 +1393,14 @@ function renderCalendar(entries) {
     const container = document.getElementById('calendarContainer');
     if (!container) return;
 
-    if (!entries.length) {
+    const allEntries = (entries || []).slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (!allEntries.length) {
         container.innerHTML = '<p style="color:var(--text-muted); font-size:14px;">No rest or cardio days logged yet.</p>';
         return;
     }
 
-    const rows = entries
-        .slice()
-        .sort((a, b) => new Date(a.date) - new Date(b.date))
+    const rows = allEntries
         .map(entry => `
             <tr>
                 <td>${entry.date}</td>
@@ -1169,6 +1530,16 @@ function refreshDashboard() {
 window.addEventListener('DOMContentLoaded', () => {
     renderWorkoutOptions();
     loadAppSettings();
+    applyLoginCustomization();
+    updatePasswordStrength();
+    applyLoginLockoutUI();
+
+    const loginPassword = document.getElementById('loginPassword');
+    if (loginPassword) loginPassword.addEventListener('input', updatePasswordStrength);
+
+    const regPassword = document.getElementById('regPassword');
+    if (regPassword) regPassword.addEventListener('input', updatePasswordStrength);
+
     const storedUid = localStorage.getItem('st_currentUser');
     if (storedUid) {
         currentUserId = parseInt(storedUid);

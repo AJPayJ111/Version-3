@@ -1,7 +1,11 @@
 /* Custom variables for accessible color theme management */
 :root {
-    --bg-main: #1e1e1e;
-    --bg-card: #2d2d2d;
+    --bg-main: #15171a;
+    --bg-main-alt: #1e2328;
+    --bg-card: #2a2f36;
+    --bg-card-alt: #24282d;
+    --bg-topbar: rgba(10, 12, 16, 0.96);
+    --bg-input: #111111;
     --text-main: #ffffff;
     --text-muted: #b3b3b3;
     --accent-amber: #f39c12;
@@ -10,11 +14,14 @@
     --btn-danger: #c0392b;
     --btn-danger-hover: #e74c3c;
     --border-color: #404040;
+    --page-bg-start: #0f1724;
+    --page-bg-mid: #1e2330;
+    --page-bg-end: #0c1218;
 }
 
 body {
     font-family: 'Helvetica Neue', Arial, sans-serif;
-    background: linear-gradient(135deg, #15171a 0%, #1e2328 100%);
+    background: linear-gradient(135deg, var(--bg-main) 0%, var(--bg-main-alt) 100%);
     color: var(--text-main);
     margin: 0;
     padding: 0;
@@ -23,7 +30,7 @@ body {
 }
 
 .topbar {
-    background: rgba(10, 12, 16, 0.96);
+    background: var(--bg-topbar);
     border-bottom: 2px solid rgba(243, 156, 18, 0.7);
     color: var(--text-main);
     padding: 14px 24px;
@@ -46,7 +53,7 @@ body {
 }
 
 .card {
-    background: linear-gradient(180deg, #2a2f36 0%, #24282d 100%);
+    background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-card-alt) 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-top: 4px solid var(--accent-amber);
     border-radius: 14px;
@@ -63,6 +70,252 @@ body {
     padding-bottom: 10px;
 }
 
+.settings-shell {
+    display: grid;
+    gap: 20px;
+}
+
+.settings-section .settings-section-head {
+    margin-bottom: 14px;
+}
+
+.settings-section .settings-section-head h2 {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 4px;
+}
+
+.settings-section .settings-section-head p {
+    margin: 0;
+    color: var(--text-muted);
+}
+
+.settings-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.settings-field-full {
+    grid-column: 1 / -1;
+}
+
+.settings-field label {
+    margin-top: 0;
+}
+
+.settings-range-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.settings-range-row input {
+    flex: 1;
+}
+
+.settings-panel {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.settings-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.settings-actions .btn {
+    margin-top: 0;
+}
+
+.page#page-login,
+.page#page-register {
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--page-bg-start) 0%, var(--page-bg-mid) 45%, var(--page-bg-end) 100%);
+    padding: 28px 16px;
+    box-sizing: border-box;
+}
+
+body.app-mode-grey {
+    --bg-main: #e8e8ea;
+    --bg-main-alt: #f3f4f6;
+    --bg-card: #f8f9fb;
+    --bg-card-alt: #eef1f4;
+    --bg-topbar: rgba(255, 255, 255, 0.95);
+    --bg-input: #ffffff;
+    --text-main: #222222;
+    --text-muted: #5b6470;
+    --border-color: #cfd4da;
+    --page-bg-start: #f0f2f5;
+    --page-bg-mid: #f7f9fb;
+    --page-bg-end: #e1e6eb;
+}
+
+body.app-mode-white {
+    --bg-main: #f8fafc;
+    --bg-main-alt: #ffffff;
+    --bg-card: #ffffff;
+    --bg-card-alt: #f7f9fc;
+    --bg-topbar: rgba(255, 255, 255, 0.98);
+    --bg-input: #ffffff;
+    --text-main: #111111;
+    --text-muted: #5f6b7a;
+    --border-color: #d9e0e8;
+    --page-bg-start: #f9fbff;
+    --page-bg-mid: #f2f6fb;
+    --page-bg-end: #e9eef5;
+}
+
+body.auth-theme-aurora .page#page-login,
+body.auth-theme-aurora .page#page-register {
+    background: linear-gradient(135deg, #072735 0%, #19344d 45%, #08101f 100%);
+}
+
+body.auth-theme-sunset .page#page-login,
+body.auth-theme-sunset .page#page-register {
+    background: linear-gradient(135deg, #2a1520 0%, #5b2d2a 45%, #120d19 100%);
+}
+
+.auth-wrap {
+    max-width: 460px;
+    margin: 0 auto;
+    padding: 16px 0 32px;
+}
+
+.auth-card {
+    padding: 24px;
+}
+
+.auth-wrap h1 {
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.auth-wrap > p {
+    text-align: center;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+}
+
+.auth-inline-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.btn-secondary {
+    background: #3b4450;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #4f5a67;
+}
+
+.btn-link {
+    border: none;
+    background: none;
+    color: var(--accent-amber);
+    cursor: pointer;
+    padding: 0;
+    font-size: 13px;
+}
+
+.inline-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.password-strength {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.password-field {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.password-field input {
+    flex: 1;
+}
+
+.password-strength.weak {
+    color: #ff8a80;
+}
+
+.password-strength.good {
+    color: #ffd54f;
+}
+
+.password-strength.strong {
+    color: #66bb6a;
+}
+
+.security-banner {
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.auth-status {
+    display: none;
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.auth-status.error {
+    display: block;
+    background: rgba(192, 57, 43, 0.2);
+    color: #ffb4aa;
+}
+
+.auth-status.success {
+    display: block;
+    background: rgba(46, 204, 113, 0.16);
+    color: #b8f5c8;
+}
+
+.auth-profile-card {
+    margin-bottom: 24px;
+}
+
+.auth-profile-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.auth-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.register-help {
+    margin-bottom: 8px;
+}
+
 label {
     display: block;
     font-size: 14px;
@@ -75,7 +328,7 @@ label {
 input, select, textarea {
     width: 100%;
     padding: 10px;
-    background-color: #111111;
+    background-color: var(--bg-input);
     border: 1px solid var(--border-color);
     border-radius: 4px;
     font-size: 14px;
